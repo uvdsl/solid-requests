@@ -1,0 +1,49 @@
+{
+  "name": "@uvdsl/solid-requests",
+  "version": "0.0.1",
+  "author": "uvdsl - Christoph Braun",
+  "license": "MIT",
+  "description": "A small library that provides HTTP requests using the Solid protocol.",
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uvdsl/solid-requests.git"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/index.iife.js",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs,iife",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "@types/n3": "^1.24.2",
+    "@typescript-eslint/eslint-plugin": "^8.29.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.5",
+    "prettier": "^3.5.3",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@uvdsl/solid-oidc-client-browser": "^0.0.3",
+    "axios": "^1.8.4",
+    "n3": "^1.24.2"
+  }
+}
