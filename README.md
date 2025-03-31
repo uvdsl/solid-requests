@@ -1,3 +1,5 @@
+![NPM Version](https://img.shields.io/npm/v/%40uvdsl%2Fsolid-requests)
+
 # Solid Requests
 
 A small library that provides HTTP requests using the [Solid protocol](https://solidproject.org/TR/protocol).
