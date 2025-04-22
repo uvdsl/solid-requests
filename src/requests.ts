@@ -1,7 +1,6 @@
 "use strict";
 
 import { Parser, Prefixes, Quad, Store } from "n3";
-import { AxiosHeaders, AxiosResponse } from "axios";
 import { Session } from "@uvdsl/solid-oidc-client-browser";
 import { LDP } from "./namespaces";
 
@@ -18,16 +17,16 @@ export interface ParsedN3 {
 
 /**
  *
- * @param response http response, e.g. from axiosFetch
+ * @param response http response, e.g. from authFetch
  * @throws Error, if response is not ok
  * @returns the response, if response is ok
  */
 function _checkResponseStatus(
-  response: AxiosResponse<any, any>
-): AxiosResponse<any, any> {
+  response: Response
+): Response {
   if (response.status >= 400) {
     throw new Error(
-      `Action on \`${response.request.url}\` failed: \`${response.status}\` \`${response.statusText}\`.`
+      `Action on \`${response.url}\` failed: \`${response.status}\` \`${response.statusText}\`.`
     );
   }
   return response;
@@ -83,10 +82,10 @@ export async function parseToN3(
 }
 
 /**
- * Send a session.axiosFetch request: GET, uri, async requesting `text/turtle`
+ * Send a session.authFetch request: GET, uri, async requesting `text/turtle`
  *
  * @param uri: the URI of the text/turtle to get
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @param headers: OPTIONAL - headers to set manually (e.g. `Accept` or `baseIRI`), `content-type` is set by default to `text/turtle`.
  * @return Promise string of the response text/turtle
  */
@@ -94,7 +93,7 @@ export async function getResource(
   uri: string,
   session?: Session,
   headers?: Record<string, string>
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   console.log("### SoLiD\t| GET\n" + uri);
   if (session === undefined) session = new Session();
   if (!headers) headers = {};
@@ -102,17 +101,17 @@ export async function getResource(
     ? headers["Accept"]
     : "text/turtle,application/ld+json";
   return session
-    .authFetch({ url: uri, method: "GET", headers: headers })
+    .authFetch(uri, { method: "GET", headers: headers })
     .then(_checkResponseStatus);
 }
 
 /**
- * Send a session.axiosFetch request: POST, uri, async providing `text/turtle`
+ * Send a session.authFetch request: POST, uri, async providing `text/turtle`
  * providing `text/turtle` and baseURI header, accepting `text/turtle`
  *
  * @param uri: the URI of the server (the text/turtle to post to)
  * @param body: OPTIONAL - the text/turtle to provide
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @param headers: OPTIONAL - headers to set manually (e.g. `Accept` or `baseIRI`), `content-type` is set by default to `text/turtle`.
  * @return Promise of the response
  */
@@ -121,30 +120,29 @@ export async function postResource(
   body?: string,
   session?: Session,
   headers?: Record<string, string>
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   if (session === undefined) session = new Session();
   if (!headers) headers = {};
   headers["Content-type"] = headers["Content-type"]
     ? headers["Content-type"]
     : "text/turtle";
   return session
-    .authFetch({
-      url: uri,
+    .authFetch(uri, {
       method: "POST",
       headers: headers,
-      data: body,
+      body: body,
     })
     .then(_checkResponseStatus);
 }
 
 /**
- * Send a session.axiosFetch request: POST, location uri, container name, async .
+ * Send a session.authFetch request: POST, location uri, container name, async .
  * This will generate a new URI at which the resource will be available.
  * The response's `Location` header will contain the URL of the created resource.
  *
  * @param uri: the URI of the resrouce to post to / to be located at
  * @param body: the body of the resource to create
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return Promise Response
  */
 export async function createResource(
@@ -152,7 +150,7 @@ export async function createResource(
   body: string,
   session?: Session,
   headers?: Record<string, string>
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   console.log("### SoLiD\t| CREATE RESOURCE AT\n" + locationURI);
   if (!headers) headers = {};
   headers["Content-type"] = headers["Content-type"]
@@ -163,20 +161,20 @@ export async function createResource(
 }
 
 /**
- * Send a session.axiosFetch request: POST, location uri, resource name, async .
+ * Send a session.authFetch request: POST, location uri, resource name, async .
  * If the container already exists, an additional one with a prefix will be created.
  * The response's `Location` header will contain the URL of the created resource.
  *
  * @param uri: the URI of the container to post to
  * @param name: the name of the container
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return Promise Response (location header not included (i think) since you know the name and folder)
  */
 export async function createContainer(
   locationURI: string,
   name: string,
   session?: Session
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   console.log("### SoLiD\t| CREATE CONTAINER\n" + locationURI + name + "/");
   const body = undefined;
   return postResource(locationURI, body, session, {
@@ -189,19 +187,19 @@ export async function createContainer(
  * Get the Location header of a newly created resource.
  * @param resp string location header
  */
-export function getLocationHeader(resp: AxiosResponse<any, any>): string {
-  if (!(resp.headers instanceof AxiosHeaders && resp.headers.has("Location"))) {
-    throw new Error(`Location Header at \`${resp.request.url}\` not set.`);
+export function getLocationHeader(resp: Response): string {
+  if (!(resp.headers instanceof Headers && resp.headers.has("Location"))) {
+    throw new Error(`Location Header at \`${resp.url}\` not set.`);
   }
   let loc = resp.headers.get("Location");
   if (!loc) {
     throw new Error(
-      `Could not get Location Header at \`${resp.request.url}\`.`
+      `Could not get Location Header at \`${resp.url}\`.`
     );
   }
   loc = loc.toString();
   if (!loc.startsWith("http://") && !loc.startsWith("https://")) {
-    loc = new URL(resp.request.url).origin + loc;
+    loc = new URL(resp.url).origin + loc;
   }
   return loc;
 }
@@ -215,7 +213,7 @@ export function getLocationHeader(resp: AxiosResponse<any, any>): string {
 export async function getContainerItems(uri: string, session?: Session) {
   console.log("### SoLiD\t| GET CONTAINER ITEMS\n" + uri);
   return getResource(uri, session)
-    .then((resp) => resp.data)
+    .then((resp) => resp.text())
     .then((txt) => parseToN3(txt, uri))
     .then((parsedN3) => parsedN3.store)
     .then((store) =>
@@ -224,11 +222,11 @@ export async function getContainerItems(uri: string, session?: Session) {
 }
 
 /**
- * Send a session.axiosFetch request: PUT, uri, async providing `text/turtle`
+ * Send a session.authFetch request: PUT, uri, async providing `text/turtle`
  *
  * @param uri: the URI of the text/turtle to be put
  * @param body: the text/turtle to provide
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return Promise string  of the created URI from the response `Location` header
  */
 export async function putResource(
@@ -236,7 +234,7 @@ export async function putResource(
   body: string,
   session?: Session,
   headers?: Record<string, string>
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   console.log("### SoLiD\t| PUT\n" + uri);
   if (session === undefined) session = new Session();
   if (!headers) headers = {};
@@ -245,45 +243,44 @@ export async function putResource(
     : "text/turtle";
   headers["Link"] = `<${LDP("Resource")}>; rel="type"`;
   return session
-    .authFetch({
-      url: uri,
-      method: "PUT",
-      headers: headers,
-      data: body,
-    })
+    .authFetch(uri,
+      {
+        method: "PUT",
+        headers: headers,
+        body: body,
+      })
     .then(_checkResponseStatus);
 }
 
 /**
- * Send a session.axiosFetch request: PATCH, uri, async providing `text/n3`
+ * Send a session.authFetch request: PATCH, uri, async providing `text/n3`
  *
  * @param uri: the URI of the text/n3 to be patch
  * @param body: the text/turtle to provide
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return Promise string  of the created URI from the response `Location` header
  */
 export async function patchResource(
   uri: string,
   body: string,
   session?: Session
-): Promise<AxiosResponse<any, any>> {
+): Promise<Response> {
   console.log("### SoLiD\t| PATCH\n" + uri);
   if (session === undefined) session = new Session();
   return session
-    .authFetch({
-      url: uri,
+    .authFetch(uri, {
       method: "PATCH",
       headers: { "Content-Type": "text/n3" },
-      data: body,
+      body: body,
     })
     .then(_checkResponseStatus);
 }
 
 /**
- * Send a session.axiosFetch request: DELETE, uri, async
+ * Send a session.authFetch request: DELETE, uri, async
  *
  * @param uri: the URI of the text/turtle to delete
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return true if http request successfull with status 204
  */
 export async function deleteResource(
@@ -293,8 +290,7 @@ export async function deleteResource(
   console.log("### SoLiD\t| DELETE\n" + uri);
   if (session === undefined) session = new Session();
   return session
-    .authFetch({
-      url: uri,
+    .authFetch(uri, {
       method: "DELETE",
     })
     .then(_checkResponseStatus)
@@ -342,10 +338,10 @@ function _parseLinkHeader(txt: string): Record<string, Array<string> | string> {
 }
 
 /**
- * Send a session.axiosFetch request: HEAD, uri, header `Link` as json obj
+ * Send a session.authFetch request: HEAD, uri, header `Link` as json obj
  *
  * @param uri: the URI of the text/turtle to get the access control file for
- * @param session: OPTIONAL - session.axiosFetch function to use, e.g. session.authFetch of a solid session
+ * @param session: OPTIONAL - session.authFetch function to use, e.g. session.authFetch of a solid session
  * @return Json object of the Link header
  */
 export async function getLinkHeader(
@@ -355,16 +351,16 @@ export async function getLinkHeader(
   console.log("### SoLiD\t| HEAD\n" + uri);
   if (session === undefined) session = new Session();
   return session
-    .authFetch({ url: uri, method: "HEAD" })
+    .authFetch(uri, { method: "HEAD" })
     .then(_checkResponseStatus)
     .then((resp) => {
-      if (!(resp.headers instanceof AxiosHeaders && resp.headers.has("Link"))) {
-        throw new Error(`Link Header at \`${resp.request.url}\` not set.`);
+      if (!(resp.headers instanceof Headers && resp.headers.has("Link"))) {
+        throw new Error(`Link Header at \`${resp.url}\` not set.`);
       }
       const linkHeader = resp.headers.get("Link");
       if (linkHeader == null) {
         throw new Error(
-          `Could not get Link Header at \`${resp.request.url}\`.`
+          `Could not get Link Header at \`${resp.url}\`.`
         );
       } else {
         return linkHeader.toString();
