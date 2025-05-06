@@ -1,6 +1,6 @@
 {
   "name": "@uvdsl/solid-requests",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "author": "uvdsl - Christoph Braun",
   "license": "MIT",
   "description": "A small library that provides HTTP requests using the Solid protocol.",
