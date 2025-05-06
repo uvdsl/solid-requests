@@ -4,7 +4,6 @@
 
 A small library that provides HTTP requests using the [Solid protocol](https://solidproject.org/TR/protocol).
 Requests use the `Session` object of this [Solid-OIDC implementation](https://github.com/uvdsl/solid-oidc-client-browser) to make authenticated requests.
-We use [axios](https://www.npmjs.com/package/axios) as the underlying HTTP client.
 We use [n3](https://www.npmjs.com/package/n3) for parsing RDF and provide a simple helper function (`parseToN3`) for that.
 
 ## Add via npm
@@ -23,8 +22,8 @@ Get a resource ...
  // HTTP GET 
  const uri = "https://uvdsl.solid.aifb.kit.edu/profile/card#me"
  const http_response = await getResource(uri, session) // or omit session
- const http_body = http_response.data;
- const { store, prefixes } = await parseToN3(data, dataset);
+ const http_body = http_response.text();
+ const { store, prefixes } = await parseToN3(http_body, dataset);
  // use data ...
 ```
 
