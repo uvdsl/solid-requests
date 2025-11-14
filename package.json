@@ -40,7 +40,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@uvdsl/solid-oidc-client-browser": "^0.1.0",
+    "@uvdsl/solid-oidc-client-browser": "^0.2.1",
     "n3": "^1.24.2"
   }
 }
